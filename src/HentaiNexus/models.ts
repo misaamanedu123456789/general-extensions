@@ -44,3 +44,13 @@ export interface InitReaderArgs {
   title: string;
   options: Record<string, string>;
 }
+
+export type tagCategory =
+  | "artist"
+  | "author"
+  | "circle"
+  | "event"
+  | "magazine"
+  | "parody"
+  | "publisher"
+  | "tag";

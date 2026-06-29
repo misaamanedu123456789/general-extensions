@@ -94,7 +94,7 @@ export class HentaiNexusExtension implements ExtensionImpl<typeof HentaiNexusCon
 
     const api = new HentaiNexusAPI();
 
-    const homepage = await api.fetchResultPage(page, "?q=" + query.title);
+    const homepage = await api.fetchResultPage(page, query.title != "" ? "?q=" + query.title : "");
 
     const results = toSearchResult(parseResultpage(homepage));
 
@@ -112,12 +112,17 @@ export class HentaiNexusExtension implements ExtensionImpl<typeof HentaiNexusCon
 
   // Populates the chapter list
   async getChapters(sourceManga: SourceManga, _sinceDate?: Date): Promise<Chapter[]> {
+    const additionalInfo = sourceManga.mangaInfo?.additionalInfo;
+    console.log(JSON.stringify(additionalInfo, null, 4));
     return [
       {
         chapterId: sourceManga.mangaId,
         sourceManga: sourceManga,
         langCode: "en",
+        // stole the idea from https://github.com/Catta1997/Sinon-Paperback-Extensions/blob/a750f31f65b058ed670b3068487478213ce57b0a/src/EHentai/parser.ts#L233
+        title: additionalInfo?.pages ? additionalInfo.pages + " pages" : "",
         chapNum: 1,
+        volume: 0,
       },
     ];
   }

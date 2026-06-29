@@ -9,7 +9,7 @@ import {
   type Response,
 } from "@paperback/types";
 
-import { DOMAIN } from "./models";
+import { DOMAIN, type tagCategory } from "./models";
 
 // Intercepts all the requests and responses and allows you to make changes to them
 export class HentaiNexusInterceptor extends PaperbackInterceptor {
@@ -63,6 +63,14 @@ export class HentaiNexusAPI {
 
   async fetchChapterPage(chapterId: string): Promise<string> {
     let url = new URL(DOMAIN).addPathComponent("read").addPathComponent(chapterId);
+    return this.fetchText(url.toString());
+  }
+
+  async fetchCategoriesPage(category: tagCategory): Promise<string> {
+    let url = new URL(DOMAIN)
+      .addPathComponent("explore")
+      .addPathComponent("categories")
+      .addPathComponent(category);
     return this.fetchText(url.toString());
   }
 }

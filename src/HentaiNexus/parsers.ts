@@ -4,8 +4,11 @@ import {
   type ProminentCarouselItem,
   type SearchResultItem,
   type SourceManga,
+  type Tag,
+  type TagSection,
 } from "@paperback/types";
 import * as cheerio from "cheerio";
+import type { Element } from "domhandler"; // Cheerio's Element, not the DOM's
 
 import { extractImageUrls } from "./decrypt";
 import { DOMAIN, type InitReaderArgs } from "./models";
@@ -60,6 +63,20 @@ export const maxPagesResult = (resultPageRAW: string): number => {
   return Number(lastPageLink.text().trim());
 };
 
+export function textToId(text: string): string {
+  return encodeURIComponent(text).replace(
+    /[!'()*~]/g,
+    (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase(),
+  );
+}
+
+/**
+ * Restores the original UTF-8 text.
+ */
+export function idToText(id: string): string {
+  return decodeURIComponent(id);
+}
+
 export const parseViewPage = (viewPageRAW: string, mangaId: string): SourceManga => {
   const $ = cheerio.load(viewPageRAW);
   const infoBox = $("div.box:first");
@@ -67,7 +84,7 @@ export const parseViewPage = (viewPageRAW: string, mangaId: string): SourceManga
   const image = $("figure > img", infoBox).attr("src");
 
   // Build a dictionary from the table rows
-  const tableData: Record<string, any> = {};
+  const tableData: Record<string, cheerio.Cheerio<Element>> = {};
 
   $("table > tbody > tr", infoBox).each((_, row) => {
     const cells = $("td", row);
@@ -76,34 +93,66 @@ export const parseViewPage = (viewPageRAW: string, mangaId: string): SourceManga
 
     if (key) tableData[key] = value;
   });
-  console.log(tableData, Object.keys(tableData));
-  const artist = tableData["artist"]
-    .children()
-    .first()
-    .clone()
-    .find("span")
-    .remove()
-    .end()
-    .text()
-    .trim();
 
+  const tableRes = (element: cheerio.Cheerio<Element>): string => {
+    return element.children().first().clone().find("span").remove().end().text().trim();
+  };
+
+  console.log(tableData, Object.keys(tableData));
+
+  const title = $("h1.title", infoBox).text().trim();
+
+  const artist = tableRes(tableData["artist"]);
+  const publisher = tableRes(tableData["publisher"]);
   const synopsis = tableData["description"]?.text().trim() ?? "";
+  const likes = Number(tableData["favorites"]?.text().trim()).toString() ?? "";
+  const pages = Number(tableData["pages"]?.text().trim()).toString() ?? "";
+
+  const tagList: TagSection[] = [
+    {
+      id: "tags",
+      title: "Tags",
+      tags: [],
+    },
+  ];
+  const tagsElement = tableData["tags"].children();
+  tagsElement.each((i: number, _el: Element) => {
+    const tagTextContent = tagsElement.eq(i).text();
+
+    const cleanTagName = tagTextContent.trim().replace(/\s*\(\d[\d,]*\)$/, "");
+    console.log(cleanTagName, textToId(cleanTagName));
+    tagList[0].tags.push({
+      id: textToId(cleanTagName),
+      title: cleanTagName,
+    });
+    return;
+  });
+
+  const displayedSynopsis = `${likes} likes | ${pages} pages | publisher: ${publisher}${synopsis ? "\n\n" + synopsis : ""}`;
+  // .trim().replace(/\s*\(.*\)$/, "").trim()
+  console.log(JSON.stringify({ title, artist, publisher, synopsis, likes, pages }, null, 4));
   return {
     mangaId,
     mangaInfo: {
       thumbnailUrl: image ?? "",
-      synopsis: synopsis ?? "",
-      primaryTitle: $("h1.title", infoBox).text().trim(),
+      synopsis: displayedSynopsis ?? "",
+      primaryTitle: title ?? "",
       secondaryTitles: [],
       contentRating: ContentRating.ADULT,
       status: "Completed",
       author: artist,
       rating: 0,
-      tagGroups: [],
+      tagGroups: tagList,
       shareUrl: `${DOMAIN}/view/${mangaId}`,
+      additionalInfo: {
+        publisher,
+        likes,
+        pages,
+      },
     },
   };
 };
+
 function parseInitReaderCall(html: string): InitReaderArgs {
   // Find the initReader( line
   console.log("start parse html");
@@ -140,4 +189,23 @@ export const parseChapterPage = async (
     mangaId: chapterId,
     pages: pages,
   };
+};
+
+// TODO: do the rest in the main for advanced search lul
+export const parseCategoryPage = (categoryPageRAW: string): Tag[] => {
+  const $ = cheerio.load(categoryPageRAW);
+
+  const tags = $("div.is-multiline").children();
+  const tagList: Tag[] = [];
+
+  tags.each((i: number, _el: Element) => {
+    const tagTextContent = tags.eq(i).text();
+    const cleanTagName = tagTextContent.trim().replace(/\s*\(\d[\d,]*\)$/, "");
+
+    tagList.push({
+      id: textToId(cleanTagName),
+      title: cleanTagName,
+    });
+  });
+  return tagList;
 };

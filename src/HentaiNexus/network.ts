@@ -9,7 +9,7 @@ import {
   type Response,
 } from "@paperback/types";
 
-import { DOMAIN, type tagCategory } from "./models";
+import { DOMAIN } from "./models";
 
 // Intercepts all the requests and responses and allows you to make changes to them
 export class HentaiNexusInterceptor extends PaperbackInterceptor {
@@ -43,34 +43,21 @@ export class HentaiNexusInterceptor extends PaperbackInterceptor {
   }
 }
 
-export class HentaiNexusAPI {
-  private async fetchText(url: string): Promise<string> {
-    const data = await Application.scheduleRequest({ url, method: "GET" });
-    if (data[0].status == 404) throw new Error("Error 404:" + data[0].url + ", returned 404");
+export const fetchText = async (url: string): Promise<string> => {
+  const data = await Application.scheduleRequest({ url, method: "GET" });
+  if (data[0].status == 404) throw new Error("Error 404:" + data[0].url + ", returned 404");
 
-    return Application.arrayBufferToUTF8String(data[1]);
-  }
+  return Application.arrayBufferToUTF8String(data[1]);
+};
 
-  async fetchResultPage(page = 1, query = ""): Promise<string> {
-    let url = new URL(DOMAIN).addPathComponent("page").addPathComponent(page.toString());
-    return this.fetchText(url.toString() + query);
-  }
-
-  async fetchMangaPage(mangaId: string): Promise<string> {
-    let url = new URL(DOMAIN).addPathComponent("view").addPathComponent(mangaId);
-    return this.fetchText(url.toString());
-  }
-
-  async fetchChapterPage(chapterId: string): Promise<string> {
-    let url = new URL(DOMAIN).addPathComponent("read").addPathComponent(chapterId);
-    return this.fetchText(url.toString());
-  }
-
-  async fetchCategoriesPage(category: tagCategory): Promise<string> {
-    let url = new URL(DOMAIN)
-      .addPathComponent("explore")
-      .addPathComponent("categories")
-      .addPathComponent(category);
-    return this.fetchText(url.toString());
-  }
-}
+export const fetchData = (segments: string[], query?: Record<string, string>): Promise<string> => {
+  const url = new URL(DOMAIN);
+  segments.forEach((s) => url.addPathComponent(s));
+  let queryStr = "";
+  // doesn't use `url.setQueryItem(k, v)` because it URLEncore everything even when I don't want it to
+  if (query)
+    for (const [k, v] of Object.entries(query))
+      queryStr += (queryStr == "" ? "?" : "&") + k + "=" + v;
+  console.log(queryStr);
+  return fetchText(url.toString() + queryStr);
+};

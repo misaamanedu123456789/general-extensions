@@ -2,7 +2,9 @@ import {
   ContentRating,
   type ChapterDetails,
   type ProminentCarouselItem,
+  type SearchQuery,
   type SearchResultItem,
+  type SortingOption,
   type SourceManga,
   type Tag,
   type TagSection,
@@ -11,7 +13,7 @@ import * as cheerio from "cheerio";
 import type { Element } from "domhandler"; // Cheerio's Element, not the DOM's
 
 import { extractImageUrls } from "./decrypt";
-import { DOMAIN, type InitReaderArgs } from "./models";
+import { DOMAIN, type SearchMetadata, type InitReaderArgs, type tagCategory } from "./models";
 
 export const parseResultpage = (resultPageRAW: string): ProminentCarouselItem[] => {
   const $ = cheerio.load(resultPageRAW);
@@ -95,14 +97,26 @@ export const parseViewPage = (viewPageRAW: string, mangaId: string): SourceManga
   });
 
   const tableRes = (element: cheerio.Cheerio<Element>): string => {
-    return element.children().first().clone().find("span").remove().end().text().trim();
+    console.log("element parsing");
+    if (!element) return "";
+    const els = element.children();
+    let result: string[] = [];
+    els.each((i: number, _el: Element) => {
+      const text = els.eq(i).clone().find("span").remove().end().text().trim();
+      if (text) result.push(text);
+    });
+    return result.join(", ");
   };
 
-  console.log(tableData, Object.keys(tableData));
+  console.log("start line parse L107");
 
   const title = $("h1.title", infoBox).text().trim();
 
   const artist = tableRes(tableData["artist"]);
+  const circle = tableRes(tableData["circle"]) ?? "";
+  const event = tableRes(tableData["event"]) ?? "";
+  const magazine = tableRes(tableData["magazine"]) ?? "";
+  const parody = tableRes(tableData["parody"]) ?? "";
   const publisher = tableRes(tableData["publisher"]);
   const synopsis = tableData["description"]?.text().trim() ?? "";
   const likes = Number(tableData["favorites"]?.text().trim()).toString() ?? "";
@@ -115,7 +129,7 @@ export const parseViewPage = (viewPageRAW: string, mangaId: string): SourceManga
       tags: [],
     },
   ];
-  const tagsElement = tableData["tags"].children();
+  const tagsElement = tableData["tag"].children();
   tagsElement.each((i: number, _el: Element) => {
     const tagTextContent = tagsElement.eq(i).text();
 
@@ -128,9 +142,17 @@ export const parseViewPage = (viewPageRAW: string, mangaId: string): SourceManga
     return;
   });
 
-  const displayedSynopsis = `${likes} likes | ${pages} pages | publisher: ${publisher}${synopsis ? "\n\n" + synopsis : ""}`;
-  // .trim().replace(/\s*\(.*\)$/, "").trim()
-  console.log(JSON.stringify({ title, artist, publisher, synopsis, likes, pages }, null, 4));
+  let preSynopsis = `${likes} likes | ${pages} pages`;
+
+  const extraMetadata: Record<string, string> = { parody, publisher, magazine, circle, event };
+
+  preSynopsis += Object.entries(extraMetadata)
+    .filter(([, value]) => value !== "")
+    .map(([catName, value]) => ` | ${catName}: ${value}`)
+    .join("");
+
+  const displayedSynopsis = preSynopsis + (synopsis !== "" ? "\n\n" + synopsis : "");
+  console.log(JSON.stringify({ title, artist, synopsis, likes, pages, extraMetadata }, null, 4));
   return {
     mangaId,
     mangaInfo: {
@@ -191,6 +213,13 @@ export const parseChapterPage = async (
   };
 };
 
+function quotesIfSpaces(input: string): string {
+  const trimmed = input.trim();
+  if (!trimmed) return "";
+  const needsQuotes = /\s/.test(trimmed);
+  return needsQuotes ? `"${trimmed}"` : trimmed;
+}
+
 // TODO: do the rest in the main for advanced search lul
 export const parseCategoryPage = (categoryPageRAW: string): Tag[] => {
   const $ = cheerio.load(categoryPageRAW);
@@ -200,12 +229,83 @@ export const parseCategoryPage = (categoryPageRAW: string): Tag[] => {
 
   tags.each((i: number, _el: Element) => {
     const tagTextContent = tags.eq(i).text();
-    const cleanTagName = tagTextContent.trim().replace(/\s*\(\d[\d,]*\)$/, "");
+    const cleanTagName = tagTextContent.trim().split("\t\t\t")[0];
 
     tagList.push({
       id: textToId(cleanTagName),
       title: cleanTagName,
     });
   });
+  console.log("category :", tagList.length, "ex:", JSON.stringify(tagList[0]));
   return tagList;
+};
+
+export const makeSearchQuery = (
+  query: SearchQuery<SearchMetadata>,
+  sortingOption?: SortingOption,
+): string => {
+  // returns the text in the q param of the http request
+  // docs at: https://hentainexus.com/page/search
+  const terms: string[] = [];
+  const title = query.title?.trim();
+
+  if (title) {
+    terms.push(title);
+  }
+
+  if (sortingOption && sortingOption.id == "popular") terms.push("sort:popular");
+
+  const meta = query.metadata;
+  if (meta) {
+    const appendCategoryTerms = (
+      prefix: tagCategory,
+      values: Record<string, "included" | "excluded"> | undefined,
+    ) => {
+      if (!values || Object.keys(values).length === 0) {
+        return;
+      }
+
+      Object.entries(values).forEach(([tagName, state]) => {
+        const decodedTag = decodeURIComponent(tagName).trim();
+        if (!decodedTag) {
+          return;
+        }
+
+        const encodedTag = quotesIfSpaces(decodedTag);
+        if (!encodedTag) {
+          return;
+        }
+
+        terms.push(`${state === "excluded" ? "-" : ""}${prefix}:${encodedTag}`);
+        console.log(
+          "prefix",
+          prefix,
+          "encoded",
+          quotesIfSpaces(encodedTag),
+          "original",
+          decodedTag,
+        );
+      });
+    };
+
+    appendCategoryTerms("artist", meta.artist);
+    appendCategoryTerms("author", meta.author);
+    appendCategoryTerms("tag", meta.tag);
+
+    const appendSingleValueTerm = (prefix: string, value: string | undefined) => {
+      const trimmed = value?.trim();
+      if (!trimmed) return;
+
+      terms.push(`${prefix}:${trimmed}`);
+      console.log("prefix", prefix, "encoded", quotesIfSpaces(trimmed), "original", value);
+    };
+
+    appendSingleValueTerm("parody", meta.parody);
+    appendSingleValueTerm("publisher", meta.publisher);
+    appendSingleValueTerm("magazine", meta.magazine);
+    appendSingleValueTerm("event", meta.event);
+    appendSingleValueTerm("circle", meta.circle);
+  }
+
+  return encodeURIComponent(terms.join(" ")).replace(/%20/g, "+");
 };

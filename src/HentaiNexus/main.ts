@@ -10,6 +10,7 @@
 // - Remove the content.json file and switch to cheerio
 
 import {
+  type AdvancedSearchForm,
   BasicRateLimiter,
   DiscoverSectionType,
   type Chapter,
@@ -24,13 +25,16 @@ import {
   type SourceManga,
 } from "@paperback/types";
 
+import { HentaiNexusAdvancedSearchForm } from "./forms";
 // Extension forms file
 // import { HentaiNexusAdvancedSearchForm, SettingsForm } from "./forms";
-import type { HentaiNexusSearchMetadata, Metadata } from "./models";
+import type { Categories, CategoriesCache, Metadata, SearchMetadata, tagCategory } from "./models";
 // Extension network file
-import { HentaiNexusAPI, HentaiNexusInterceptor } from "./network";
+import { fetchData, HentaiNexusInterceptor } from "./network";
 import {
+  makeSearchQuery,
   maxPagesResult,
+  parseCategoryPage,
   parseChapterPage,
   parseResultpage,
   parseViewPage,
@@ -55,28 +59,64 @@ export class HentaiNexusExtension implements ExtensionImpl<typeof HentaiNexusCon
     this.mainRateLimiter.registerInterceptor();
     this.mainInterceptor.registerInterceptor();
   }
+
+  private catgoriesCache: CategoriesCache = {
+    status: "unloaded",
+    lastUpdate: undefined,
+    categories: {
+      artist: [],
+      author: [],
+      circle: [],
+      event: [],
+      magazine: [],
+      parody: [],
+      publisher: [],
+      tag: [],
+    },
+  };
+
+  private async ensureCatgoriesCache(): Promise<CategoriesCache> {
+    const lastUpdateMs = this.catgoriesCache.lastUpdate?.getTime() ?? 0;
+    const isStale = Date.now() - lastUpdateMs > 5 * 60 * 1000;
+
+    if (this.catgoriesCache.status === "unloaded" || isStale) {
+      let categories: Categories = this.catgoriesCache.categories;
+      await Promise.all(
+        (Object.keys(categories) as tagCategory[]).map(async (cat) => {
+          const catPage = await fetchData(["explore", "categories", cat]);
+          categories[cat] = parseCategoryPage(catPage);
+        }),
+      );
+
+      this.catgoriesCache = {
+        status: "loaded",
+        lastUpdate: new Date(),
+        categories,
+      };
+    }
+
+    return this.catgoriesCache;
+  }
+
   async getDiscoverSections(): Promise<DiscoverSection[]> {
-    // First template discover section, gets populated by the getDiscoverSectionItems method
     const latestSection: DiscoverSection = {
       id: "latest",
       title: "Latest",
-      subtitle: "Latest Hentai",
+      subtitle: "Latest",
       type: DiscoverSectionType.prominentCarousel,
     };
 
     return [latestSection];
   }
 
-  // Populates both the discover sections
   async getDiscoverSectionItems(
     _section: DiscoverSection,
     metadata: Metadata,
   ): Promise<PagedResults<DiscoverSectionItem>> {
     const page = metadata?.page ?? 1;
 
-    const api = new HentaiNexusAPI();
-
-    const homepage = await api.fetchResultPage(page);
+    // TODO: add query for black listed tags in the future setting form
+    const homepage: string = await fetchData(["page", page.toString()]);
 
     const results = parseResultpage(homepage);
 
@@ -84,17 +124,17 @@ export class HentaiNexusExtension implements ExtensionImpl<typeof HentaiNexusCon
     return { items: results, metadata: page <= maxHomePage ? { page: page + 1 } : undefined };
   }
 
-  // Populates search
   async getSearchResults(
-    query: SearchQuery<HentaiNexusSearchMetadata>,
+    query: SearchQuery<SearchMetadata>,
     metadata?: Metadata,
-    _sortingOption?: SortingOption,
+    sortingOption?: SortingOption,
   ): Promise<PagedResults<SearchResultItem>> {
     const page = metadata?.page ?? 1;
-
-    const api = new HentaiNexusAPI();
-
-    const homepage = await api.fetchResultPage(page, query.title != "" ? "?q=" + query.title : "");
+    const requestParam = makeSearchQuery(query, sortingOption);
+    const homepage = await fetchData(
+      ["page", page.toString()],
+      requestParam != "" ? { q: requestParam } : undefined,
+    );
 
     const results = toSearchResult(parseResultpage(homepage));
 
@@ -102,15 +142,24 @@ export class HentaiNexusExtension implements ExtensionImpl<typeof HentaiNexusCon
     return { items: results, metadata: page <= maxHomePage ? { page: page + 1 } : undefined };
   }
 
-  // Populates the title details
+  async getAdvancedSearchForm(query: SearchQuery<SearchMetadata>): Promise<AdvancedSearchForm> {
+    const categories = await this.ensureCatgoriesCache();
+    return new HentaiNexusAdvancedSearchForm(query, categories.categories);
+  }
+
+  async getSortingOptions(_query: SearchQuery<SearchMetadata>): Promise<SortingOption[]> {
+    return [
+      { id: "latest", label: "Latest Update" },
+      { id: "popular", label: "Popular" },
+    ];
+  }
+
   async getMangaDetails(mangaId: string): Promise<SourceManga> {
-    const api = new HentaiNexusAPI();
-    const mangaPage = await api.fetchMangaPage(mangaId);
+    const mangaPage = await fetchData(["view", mangaId]);
 
     return parseViewPage(mangaPage, mangaId);
   }
 
-  // Populates the chapter list
   async getChapters(sourceManga: SourceManga, _sinceDate?: Date): Promise<Chapter[]> {
     const additionalInfo = sourceManga.mangaInfo?.additionalInfo;
     console.log(JSON.stringify(additionalInfo, null, 4));
@@ -119,7 +168,6 @@ export class HentaiNexusExtension implements ExtensionImpl<typeof HentaiNexusCon
         chapterId: sourceManga.mangaId,
         sourceManga: sourceManga,
         langCode: "en",
-        // stole the idea from https://github.com/Catta1997/Sinon-Paperback-Extensions/blob/a750f31f65b058ed670b3068487478213ce57b0a/src/EHentai/parser.ts#L233
         title: additionalInfo?.pages ? additionalInfo.pages + " pages" : "",
         chapNum: 1,
         volume: 0,
@@ -127,10 +175,8 @@ export class HentaiNexusExtension implements ExtensionImpl<typeof HentaiNexusCon
     ];
   }
 
-  // Populates a chapter with images
   async getChapterDetails(chapter: Chapter): Promise<ChapterDetails> {
-    const api = new HentaiNexusAPI();
-    const mangaPage = await api.fetchChapterPage(chapter.chapterId);
+    const mangaPage = await fetchData(["read", chapter.chapterId]);
 
     return await parseChapterPage(mangaPage, chapter.chapterId);
   }

@@ -54,3 +54,21 @@ export type tagCategory =
   | "parody"
   | "publisher"
   | "tag";
+
+export type Categories = Record<tagCategory, Tag[]>;
+export interface CategoriesCache {
+  status: "unloaded" | "loaded";
+  lastUpdate: undefined | Date;
+  categories: Categories;
+}
+
+export type SearchMetadata = {
+  tag?: { [id: string]: "included" | "excluded" }; // genre id (lowercased slug) → state
+  parody?: string;
+  artist?: { [id: string]: "included" | "excluded" };
+  publisher?: string;
+  magazine?: string;
+  author?: { [id: string]: "included" | "excluded" };
+  event?: string;
+  circle?: string;
+};

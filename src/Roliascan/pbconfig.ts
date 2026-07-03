@@ -4,24 +4,22 @@
 import { ContentRating, SourceIntents, type ExtensionInfo } from "@paperback/types";
 
 export default {
-  name: "Comix",
-  description: "Extension that pulls content from Comix.to.",
-  version: "1.0.0-alpha.44",
+  name: "Roliascan",
+  description: "Extension that pulls content from roliascan.com.",
+  version: "1.0.0-alpha.1",
   icon: "icon.png",
   language: "en",
-  contentRating: ContentRating.EVERYONE,
+  contentRating: ContentRating.MATURE,
   capabilities: [
-    SourceIntents.CHAPTER_PROVIDING,
-    SourceIntents.CLOUDFLARE_BYPASS_PROVIDING,
     SourceIntents.DISCOVER_SECTION_PROVIDING,
     SourceIntents.SEARCH_RESULT_PROVIDING,
-    SourceIntents.SETTINGS_FORM_PROVIDING,
+    SourceIntents.CHAPTER_PROVIDING,
+    SourceIntents.CLOUDFLARE_BYPASS_PROVIDING,
   ],
   badges: [],
   developers: [
     {
-      name: "Catta1997",
-      github: "https://github.com/Catta1997",
+      name: "Saw_6",
     },
   ],
 } satisfies ExtensionInfo;

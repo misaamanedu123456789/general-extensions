@@ -4,12 +4,12 @@
 import { ContentRating, SourceIntents, type ExtensionInfo } from "@paperback/types";
 
 export default {
-  name: "Comix",
-  description: "Extension that pulls content from Comix.to.",
-  version: "1.0.0-alpha.44",
+  name: "Mangago",
+  description: "Extension that pulls content from mangago.me.",
+  version: "1.0.0-alpha.1",
   icon: "icon.png",
   language: "en",
-  contentRating: ContentRating.EVERYONE,
+  contentRating: ContentRating.ADULT,
   capabilities: [
     SourceIntents.CHAPTER_PROVIDING,
     SourceIntents.CLOUDFLARE_BYPASS_PROVIDING,
@@ -20,8 +20,8 @@ export default {
   badges: [],
   developers: [
     {
-      name: "Catta1997",
-      github: "https://github.com/Catta1997",
+      name: "Popmango",
+      github: "https://github.com/PoppingMangoSources",
     },
   ],
 } satisfies ExtensionInfo;

@@ -4,20 +4,24 @@
 import { ContentRating, SourceIntents, type ExtensionInfo } from "@paperback/types";
 
 export default {
-  name: "Comix",
-  description: "Extension that pulls content from Comix.to.",
-  version: "1.0.0-alpha.44",
+  name: "LNori",
+  description: "Extension that pulls content from LNori.",
+  version: "1.0.0-alpha.1",
   icon: "icon.png",
   language: "en",
   contentRating: ContentRating.EVERYONE,
   capabilities: [
-    SourceIntents.CHAPTER_PROVIDING,
-    SourceIntents.CLOUDFLARE_BYPASS_PROVIDING,
     SourceIntents.DISCOVER_SECTION_PROVIDING,
     SourceIntents.SEARCH_RESULT_PROVIDING,
-    SourceIntents.SETTINGS_FORM_PROVIDING,
+    SourceIntents.CHAPTER_PROVIDING,
   ],
-  badges: [],
+  badges: [
+    {
+      label: "Novel",
+      textColor: "#ffffff",
+      backgroundColor: "#3baf4b",
+    },
+  ],
   developers: [
     {
       name: "Catta1997",

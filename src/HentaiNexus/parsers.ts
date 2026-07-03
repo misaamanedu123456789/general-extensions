@@ -129,7 +129,7 @@ export const parseViewPage = (viewPageRAW: string, mangaId: string): SourceManga
       tags: [],
     },
   ];
-  const tagsElement = tableData["tag"].children();
+  const tagsElement = tableData["tags"].children();
   tagsElement.each((i: number, _el: Element) => {
     const tagTextContent = tagsElement.eq(i).text();
 

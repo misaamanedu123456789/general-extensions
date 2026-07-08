@@ -6,7 +6,7 @@ import { ContentRating, SourceIntents, type ExtensionInfo } from "@paperback/typ
 export default {
   name: "HentaiNexus",
   description: "Extension that pulls content from hentainexus.com.",
-  version: "1.0.0-alpha.1b",
+  version: "1.0.0-alpha.1c",
   icon: "icon.png",
   language: "en",
   contentRating: ContentRating.ADULT,

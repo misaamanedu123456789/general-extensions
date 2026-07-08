@@ -105,18 +105,26 @@ export class HentaiNexusExtension implements ExtensionImpl<typeof HentaiNexusCon
       subtitle: "Latest",
       type: DiscoverSectionType.prominentCarousel,
     };
+    const popularSection: DiscoverSection = {
+      id: "popular",
+      title: "Popular",
+      subtitle: "Popular",
+      type: DiscoverSectionType.prominentCarousel,
+    };
 
-    return [latestSection];
+    return [latestSection, popularSection];
   }
 
   async getDiscoverSectionItems(
-    _section: DiscoverSection,
+    section: DiscoverSection,
     metadata: Metadata,
   ): Promise<PagedResults<DiscoverSectionItem>> {
     const page = metadata?.page ?? 1;
 
     // TODO: add query for black listed tags in the future setting form
-    const homepage: string = await fetchData(["page", page.toString()]);
+    const homepage: string = await fetchData(["page", page.toString()], {
+      q: section.id === "popular" ? "sort:popular" : "",
+    });
 
     const results = parseResultpage(homepage);
 

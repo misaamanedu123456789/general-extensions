@@ -183,7 +183,7 @@ export class HentaiNexusAdvancedSearchForm extends AdvancedSearchForm {
       Section("parody", [
         SelectRow("Parody", {
           title: "Parody",
-          layout: "flow",
+          layout: "list",
           value: this.parody,
           items: this.parodyOption,
           minItemCount: 0,
@@ -197,7 +197,7 @@ export class HentaiNexusAdvancedSearchForm extends AdvancedSearchForm {
       Section("artist", [
         TriStateSelectRow("Artist", {
           title: "Artist",
-          layout: "flow",
+          layout: "list",
           value: this.artist,
           items: this.artistOption,
           allowExclusion: true,
@@ -211,7 +211,7 @@ export class HentaiNexusAdvancedSearchForm extends AdvancedSearchForm {
       Section("author", [
         TriStateSelectRow("Author", {
           title: "Author",
-          layout: "flow",
+          layout: "list",
           value: this.author,
           items: this.authorOption,
           allowExclusion: true,
@@ -225,7 +225,7 @@ export class HentaiNexusAdvancedSearchForm extends AdvancedSearchForm {
       Section("publisher", [
         SelectRow("Publisher", {
           title: "Publisher",
-          layout: "flow",
+          layout: "list",
           value: this.publisher,
           items: this.publisherOption,
           minItemCount: 0,
@@ -239,7 +239,7 @@ export class HentaiNexusAdvancedSearchForm extends AdvancedSearchForm {
       Section("magazine", [
         SelectRow("Magazine", {
           title: "Magazine",
-          layout: "flow",
+          layout: "list",
           value: this.magazine,
           items: this.magazineOption,
           minItemCount: 0,
@@ -253,7 +253,7 @@ export class HentaiNexusAdvancedSearchForm extends AdvancedSearchForm {
       Section("event", [
         SelectRow("Event", {
           title: "Event",
-          layout: "flow",
+          layout: "list",
           value: this.event,
           items: this.eventOption,
           minItemCount: 0,
@@ -267,7 +267,7 @@ export class HentaiNexusAdvancedSearchForm extends AdvancedSearchForm {
       Section("circle", [
         SelectRow("Circle", {
           title: "Circle",
-          layout: "flow",
+          layout: "list",
           value: this.circle,
           items: this.circleOption,
           minItemCount: 0,

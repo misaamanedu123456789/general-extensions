@@ -1,5 +1,5 @@
 {
-  "buildTime": "2026-07-08T00:51:38.845Z",
+  "buildTime": "2026-07-08T01:44:50.790Z",
   "builtWith": {
     "toolchain": "1.0.0-alpha.92",
     "types": "1.0.0-alpha.92"
@@ -79,7 +79,7 @@
     {
       "name": "HentaiNexus",
       "description": "Extension that pulls content from hentainexus.com.",
-      "version": "1.0.0-alpha.1b",
+      "version": "1.0.0-alpha.1c",
       "icon": "icon.png",
       "language": "en",
       "contentRating": "ADULT",

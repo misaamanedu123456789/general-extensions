@@ -284,6 +284,8 @@ export const makeSearchQuery = (
           quotesIfSpaces(encodedTag),
           "original",
           decodedTag,
+          "originalxoriginal",
+          tagName,
         );
       });
     };
@@ -295,9 +297,10 @@ export const makeSearchQuery = (
     const appendSingleValueTerm = (prefix: string, value: string | undefined) => {
       const trimmed = value?.trim();
       if (!trimmed) return;
+      const encoded = quotesIfSpaces(decodeURIComponent(trimmed));
 
-      terms.push(`${prefix}:${trimmed}`);
-      console.log("prefix", prefix, "encoded", quotesIfSpaces(trimmed), "original", value);
+      terms.push(`${prefix}:${encoded}`);
+      console.log("prefix", prefix, "encoded", encoded, "original", value);
     };
 
     appendSingleValueTerm("parody", meta.parody);

@@ -178,7 +178,9 @@ export const parseViewPage = (viewPageRAW: string, mangaId: string): SourceManga
 function parseInitReaderCall(html: string): InitReaderArgs {
   // Find the initReader( line
   console.log("start parse html");
-  const match = html.match(/initReader\(\s*"([\s\S]*?)",\s*"(.*?)",\s*(\{[\s\S]*?\})\s*\)/);
+  const match = html.match(
+    /initReader\(\s*"([\s\S]*?)",\s*"(.*?)",\s*(?:\d+\s*,\s*)?(\{[\s\S]*?\})\s*\)/,
+  );
   console.log("end parse html");
   if (!match) {
     throw new Error("Could not find initReader() call in HTML");
